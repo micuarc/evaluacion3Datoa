@@ -18,26 +18,4 @@ async function importarArchivo(pathArchivo) {
   }
 }
 
-module.exports = {
-  importarArchivo,
-};
-
-async function importarArchivo(filePath) {
-  try {
-    const contenido = await fs.readFile(path.resolve(filePath), "utf8");
-    return contenido
-      .split("\n")
-      .map((linea) => linea.trim())
-      .filter((linea) => linea.length > 0);
-  } catch (error) {
-    console.error(
-      `Error al importar archivo ${path.basename(filePath)}:`,
-      error.message
-    );
-    throw error;
-  }
-}
-
-module.exports = {
-  importarArchivo,
-};
+module.exports = { importarArchivo };

@@ -1,6 +1,27 @@
 const db = require("./connectDb.js");
-let arrayCiudades = [];
 const { normalizarCaseString } = require("./utils/normalizarString.js");
+const { importarArchivo } = require("./utils/importarArchivo.js");
+let arrayCiudades = [];
+
+async function scriptTablaOriginal() {
+  let ciudades = await importarArchivo("./CSN.TXT");
+  //crear tabla
+  const crearTabla = `CREATE TABLE IF NOT EXISTS ciudades (
+        column1 VARCHAR(255) not null)`;
+  await db.query(crearTabla);
+  //importar datos. truncar primero
+  await db.query("TRUNCATE TABLE ciudades");
+  if (ciudades.length === 0) return;
+  for (const ciudad of ciudades) {
+    const importarDatos = `
+      INSERT INTO ciudades 
+      (column1) 
+      VALUES (?)
+      `;
+    await db.query(importarDatos, ciudad);
+  }
+  return ciudades.map((fila) => fila.toString());
+}
 
 function normalizarCiudad(ciudad) {
   //separamos las palabras de una ciudad. Ej: "BUENOS AIRES" -> ["BUENOS", "AIRES"]
@@ -33,19 +54,16 @@ async function guardarCiudades(ciudades) {
 }
 async function ejecutarScript() {
   try {
+    const filasCiudades = await scriptTablaOriginal();
     const regex = /^\d+\.\s*/; //regex para tomar chars que van antes de la ciudad. Ej: "12. Hola" -> toma "12 ."
-    const [rows] = await db.query("SELECT * FROM ciudades"); //leer filas de la tabla
 
     //iteraremos el array anterior para limpiar las ciudades (con map se crea otro array)
     //se aplicará la lógica del map por cada elemento del array (cada ciudad)
-    const limpiarCiudades = rows.map((ciudad) => {
-      //tomamos la primera columna (la que contiene los datos),
-      const row = ciudad["column1"];
-      //
-      const palabraTrimmeada = row.replace(regex, "");
+    const limpiarCiudades = filasCiudades.map((ciudad) => {
+      //limpiamos con el regex
+      const palabraTrimmeada = ciudad.replace(regex, "");
       //usamos la función para normalizar la ciudad
-      const ciudadNormalizada = normalizarCiudad(palabraTrimmeada);
-      return ciudadNormalizada;
+      return normalizarCiudad(palabraTrimmeada);
     });
 
     const ciudades = limpiarCiudades.filter((item, index) => {

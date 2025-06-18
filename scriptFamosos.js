@@ -1,5 +1,31 @@
 const db = require("./connectDb.js");
+const { importarArchivo } = require("./utils/importarArchivo.js");
 const regexComienzo = /^\d+\.\s*/;
+
+async function scriptTablaOriginal() {
+  let famosos = await importarArchivo("./DATOS2.TXT");
+  //crear tabla
+  const crearTabla = `CREATE TABLE IF NOT EXISTS famosos (
+        column1 VARCHAR(255) not null)`;
+  await db.query(crearTabla);
+  //importar datos. truncar primero
+  await db.query("TRUNCATE TABLE famosos");
+  if (famosos.length === 0) return;
+  for (const famoso of famosos) {
+    const importarDatos = `
+      INSERT IGNORE INTO famosos 
+      (column1) 
+      VALUES (?)
+      `;
+    await db.query(importarDatos, famoso);
+  }
+  const [filasNuevas] = await db.query(`SELECT * FROM famosos`);
+  const dividirColumnas = filasNuevas.map((fila) => {
+    const contenido = fila["column1"].toString();
+    return contenido.split(";");
+  });
+  return dividirColumnas;
+}
 
 function normalizarFamosos(famoso) {
   let hoy = new Date();
@@ -144,6 +170,7 @@ function eliminarFamososDuplicados(famosos) {
 
 async function ejecutarScript() {
   try {
+    await scriptTablaOriginal();
     const [rows] = await db.query("SELECT * FROM famosos");
     const arrayFamosos = rows.map((famoso) =>
       normalizarFamosos(famoso.column1)

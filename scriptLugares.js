@@ -42,9 +42,6 @@ function eliminarLugaresDuplicados(lugares) {
   return lugaresUnicos;
 }
 async function crearTablas() {
-  await db.query("DROP TABLE IF EXISTS direcciones_normalizadas");
-  await db.query("DROP TABLE IF EXISTS georeferencias_normalizadas");
-  await db.query("DROP TABLE IF EXISTS lugares_normalizados");
   const sqlLugares = `
     CREATE TABLE IF NOT EXISTS lugares_normalizados (
         id_lugar INT AUTO_INCREMENT PRIMARY KEY,
