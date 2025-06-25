@@ -1,9 +1,11 @@
 const tabla = document.querySelector("#tablaLugares tbody");
 const input = document.getElementById("filtrar");
+const spinner = document.getElementById("spinner");
 const contenedorTabla = document.getElementById("containerTabla");
 const formSubirArchivo = document.getElementById("examinar");
 const botonSubir = document.getElementById("subir");
 const botonDescarga = document.getElementById("descargar");
+const inputArchivo = document.getElementById("inputArchivo");
 
 let arrayOriginal = [];
 let filtroActual = "";
@@ -45,7 +47,7 @@ async function cargarBDLugares() {
 
     arrayOriginal = lugares.map((lugar, index) => ({
       numero: index + 1,
-      nombreLugar: lugar.nombre,
+      nombreLugar: lugar.nombre_lugar,
       calle: lugar.nombre_calle,
       numeroCalle: lugar.numero_calle,
       area: lugar.ciudad_estado_provincia,

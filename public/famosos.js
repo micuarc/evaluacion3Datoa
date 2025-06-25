@@ -1,27 +1,89 @@
 //selectores del DOM
 const tabla = document.querySelector("#tablaFamosos tbody");
 const input = document.getElementById("filtrar");
-const toastElList = document.querySelectorAll(".toast");
-const hoy = document.getElementById("fechaDeHoy");
-const famososDeCumpleanios = document.getElementById("famososCumpleanieros");
+const spinner = document.getElementById("spinner");
 const contenedorTabla = document.getElementById("containerTabla");
 const formSubirArchivo = document.getElementById("examinar");
 const botonSubir = document.getElementById("subir");
 const botonDescarga = document.getElementById("descargar");
 
+let toastContainer;
+let toastCreated = false;
 //array vacío para guardar orden original
 let arrayOriginal = [];
 //array y string vacíos para guardar cumpleañeros
 let arrayCumpleanieros = [];
-let stringCumpleanieros;
 //para guardar filtro actual
 let filtroActual = "";
 //para definir cuál es el orden actual. por default es original
 let ordenActual = "original";
 
+function crearToast(mensaje) {
+  if (!toastContainer) {
+    toastContainer = document.createElement("div");
+    toastContainer.className =
+      "toast-container position-fixed bottom-0 end-0 m-3";
+    document.body.appendChild(toastContainer);
+  }
+
+  const existingToast = document.getElementById("toastCumpleanios");
+  if (existingToast) existingToast.remove();
+
+  const fechaHoy = new Date().toLocaleString("es-cl", {
+    day: "numeric",
+    month: "long",
+  });
+
+  const toastEl = document.createElement("div");
+  toastEl.id = "toastCumpleanios";
+  toastEl.className = "toast";
+  toastEl.setAttribute("role", "alert");
+  toastEl.setAttribute("aria-live", "assertive");
+  toastEl.setAttribute("aria-atomic", "true");
+
+  const toastHeader = document.createElement("div");
+  toastHeader.className = "toast-header text-bg-primary";
+
+  const headerTitle = document.createElement("strong");
+  headerTitle.className = "me-auto";
+  headerTitle.textContent = "Natalicios de Hoy";
+
+  const fechaElement = document.createElement("small");
+  fechaElement.textContent = fechaHoy;
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "btn-close";
+  closeButton.setAttribute("data-bs-dismiss", "toast");
+  closeButton.setAttribute("aria-label", "Close");
+
+  toastHeader.appendChild(headerTitle);
+  toastHeader.appendChild(fechaElement);
+  toastHeader.appendChild(closeButton);
+
+  const toastBody = document.createElement("div");
+  toastBody.className = "toast-body";
+
+  const messageElement = document.createElement("p");
+  messageElement.textContent = mensaje;
+
+  toastBody.appendChild(messageElement);
+
+  toastEl.appendChild(toastHeader);
+  toastEl.appendChild(toastBody);
+  toastContainer.appendChild(toastEl);
+
+  new bootstrap.Toast(toastEl, {
+    autohide: true,
+    delay: 10000,
+  }).show();
+}
+
 formSubirArchivo.addEventListener("submit", async (e) => {
   e.preventDefault();
+  contenedorTabla.classList.add("d-none");
   botonSubir.disabled = true;
+  toastCreated = false;
   spinner.classList.remove("d-none");
   const formData = new FormData();
   formData.append("datosFamosos", inputArchivo.files[0]);
@@ -48,7 +110,11 @@ formSubirArchivo.addEventListener("submit", async (e) => {
 });
 async function cargarBDFamosos() {
   try {
-    const response = await fetch("/api/famosos"); //llamar a la api
+    spinner.classList.remove("d-none");
+    contenedorTabla.classList.add("d-none");
+
+    const response = await fetch("/api/famosos");
+
     if (!response.ok) throw new Error("Error al cargar famosos"); //si falla, mostrar error
     const famosos = await response.json(); //cargar json de la api
     // asignamos un número fijo a cada famoso (así no cambian con el filtro)
@@ -59,47 +125,72 @@ async function cargarBDFamosos() {
       edad: famosx.edad,
       flagCumpleanios: famosx.flagCumpleanios,
     }));
-    console.log("Array original armado:", arrayOriginal); // <-- Y este también
-    aplicarFiltro(); // mostrar tabla inicial
+    console.log("Array original armado:", arrayOriginal);
+    aplicarFiltro();
+    contenedorTabla.classList.remove("d-none"); // mostrar tabla inicial
   } catch (error) {
     console.error("Error:", error);
+    alert("Error al cargar datos de famosos");
+    contenedorTabla.classList.add("d-none");
+  } finally {
+    spinner.classList.add("d-none");
   }
 }
 
 //función para mostrar los valores en la tabla
+// Modified mostrarValores function without innerHTML
 function mostrarValores(arr) {
+  // Clear table body properly
+  while (tabla.firstChild) {
+    tabla.removeChild(tabla.firstChild);
+  }
+
   arrayCumpleanieros = [];
+
   arr.forEach((famoso) => {
-    const row = document.createElement("tr"); //crear una fila para cada ergistro
-    [
-      famoso.numero,
-      famoso.nombreFamoso,
-      famoso.fechaNacimiento,
-      famoso.edad,
-    ].forEach((valor, i) => {
-      //agregar celdas del array original (número y nombre)
-      const celda = document.createElement("td");
-      celda.textContent = valor;
-      row.appendChild(celda);
-    });
-    tabla.appendChild(row); //agregar fila a la tabla
+    const row = document.createElement("tr");
+
+    const numCell = document.createElement("td");
+    numCell.textContent = famoso.numero;
+    row.appendChild(numCell);
+
+    const nameCell = document.createElement("td");
+    nameCell.textContent = famoso.nombreFamoso;
+    row.appendChild(nameCell);
+
+    const dateCell = document.createElement("td");
+    dateCell.textContent = famoso.fechaNacimiento;
+    row.appendChild(dateCell);
+
+    const ageCell = document.createElement("td");
+    ageCell.textContent = famoso.edad;
+    row.appendChild(ageCell);
+
+    tabla.appendChild(row);
+
     if (famoso.flagCumpleanios) {
       arrayCumpleanieros.push(famoso.nombreFamoso);
     }
   });
+
+  // Build message
+  let mensaje;
   if (arrayCumpleanieros.length > 1) {
-    stringCumpleanieros = [
-      arrayCumpleanieros.slice(0, -1).join(", "),
-      arrayCumpleanieros.slice(-1)[0],
-    ].join(arrayCumpleanieros.length < 2 ? "" : " y ");
+    const last = arrayCumpleanieros.pop();
+    mensaje = `¡Hoy es el cumpleaños de ${arrayCumpleanieros.join(
+      ", "
+    )} y ${last}! 🎉`;
   } else if (arrayCumpleanieros.length === 1) {
-    stringCumpleanieros = arrayCumpleanieros[0];
-  }
-  if (arrayCumpleanieros.length > 0) {
-    famososDeCumpleanios.textContent = `¡Hoy es el cumpleaños de  ${stringCumpleanieros}! 🎉`;
+    mensaje = `¡Hoy es el cumpleaños de ${arrayCumpleanieros[0]}! 🎉`;
   } else {
-    famososDeCumpleanios.textContent =
+    mensaje =
       "El día de hoy no ha nacido ningún famoso. 😔 ¡Intenta de nuevo mañana!";
+  }
+
+  // Create toast only once per data load
+  if (!toastCreated) {
+    crearToast(mensaje);
+    toastCreated = true;
   }
 }
 
@@ -109,9 +200,8 @@ function aplicarFiltro() {
   // filtro por texto (input de texto)
   if (filtroActual) {
     //según el filtro aplicado
-    resultado = resultado.filter(
-      (famoso) =>
-        famoso.nombreFamoso.toLowerCase().includes(filtroActual.toLowerCase()) //mostrar los famosos que contengan el string ingresado
+    resultado = resultado.filter((famoso) =>
+      famoso.nombreFamoso.toLowerCase().includes(filtroActual.toLowerCase())
     );
   }
 
@@ -127,16 +217,12 @@ function aplicarFiltro() {
   mostrarValores(resultado);
 }
 
-const fecha = new Date().toLocaleString("es-cl", {
-  day: "numeric",
-  month: "long",
-});
-
 hoy.textContent = fecha;
 
 //LISTENERS
 //esperar que el dom esté cargado x completo
 document.addEventListener("DOMContentLoaded", () => {
+  contenedorTabla.classList.add("d-none");
   arrayOriginal = [];
   inputArchivo.value = "";
   //listener cuando se escribe algo en el input
@@ -153,9 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
       aplicarFiltro(); //aplicar el filtro
     });
   });
-  const toastList = [...toastElList].map((toastEl) =>
-    new bootstrap.Toast(toastEl).show()
-  );
+
   //recargar BD con los filtros seleccionados
   cargarBDFamosos();
 });
