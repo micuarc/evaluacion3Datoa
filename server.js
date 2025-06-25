@@ -11,11 +11,13 @@ const port = 3000;
 
 async function vaciarTablas() {
   try {
-    await db.query("DELETE FROM georeferencias_normalizadas");
-    await db.query("DELETE FROM lugares_normalizados");
-    await db.query("DELETE FROM direcciones_normalizadas");
+    await db.query("SET FOREIGN_KEY_CHECKS = 0");
+    await db.query("TRUNCATE TABLE direcciones_normalizadas");
+    await db.query("TRUNCATE TABLE georeferencias_normalizadas");
+    await db.query("TRUNCATE TABLE lugares_normalizados");
     await db.query("TRUNCATE TABLE ciudades_normalizadas");
     await db.query("TRUNCATE TABLE famosos_normalizados");
+    await db.query("SET FOREIGN_KEY_CHECKS = 1");
     console.log("Tablas vaciadas correctamente al iniciar el servidor.");
   } catch (error) {
     console.error("Error al vaciar tablas al iniciar:", error);

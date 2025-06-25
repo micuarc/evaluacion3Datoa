@@ -14,6 +14,7 @@ const obtenerDireccionConAPI = () => {
 
 async function scriptTablaOriginal() {
   let lugares = await importarArchivo("datosLugares");
+  console.log("Lugares leídos:", lugares);
   lugares.splice(0, 1);
   //crear tabla
   const crearTabla = `CREATE TABLE IF NOT EXISTS tabla_original (
@@ -166,8 +167,8 @@ async function getLugares() {
     FROM lugares_normalizados
     JOIN georeferencias_normalizadas ON lugares_normalizados.id_lugar = georeferencias_normalizadas.id_lugar
     JOIN direcciones_normalizadas ON lugares_normalizados.id_lugar = direcciones_normalizadas.id_lugar
+    ORDER BY nombre_lugar ASC
   `);
-  console.log(filas);
   return filas;
 }
 module.exports = { getLugares, ejecutarLugares };

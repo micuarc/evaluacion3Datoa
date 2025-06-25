@@ -100,31 +100,26 @@ function normalizarFamosos(famoso) {
         Math.floor((fechaEnUTC - hoyEnUTC) / 1000 / 60 / 60 / 24 / 365)
       );
     } else {
-      fechaNacimiento = `${String(mes).padStart(2, "0")}/${String(
-        dia
-      )}/${anio}`;
-
-      fechaNacimiento = new Date(fechaNacimiento);
+      fechaNacimiento = new Date(anio, mes - 1, dia);
       const fechaCopia = new Date(+fechaNacimiento).setHours(0, 0, 0, 0);
       edadFamoso = Math.abs(
         Math.floor((hoyCopia - fechaCopia) / 1000 / 60 / 60 / 24 / 365)
       );
-      hoy = hoy
-        .toLocaleDateString(`es-CL`, {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
-        .replaceAll("-", "/");
-      fechaNacimiento = fechaNacimiento
-        .toLocaleDateString(`es-CL`, {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
-        .replaceAll("-", "/");
-      flagCumpleanios =
-        hoy.substring(0, 6) === fechaNacimiento.substring(0, 6) ? 1 : 0;
+
+      // Formatear fecha de nacimiento a dd/mm/yyyy con padStart
+      const diaF = String(dia).padStart(2, "0");
+      const mesF = String(mes).padStart(2, "0");
+      const anioF = String(anio);
+      const fechaNacimientoStr = `${diaF}/${mesF}/${anioF}`;
+
+      // Comparar fechas para el cumpleaños
+      const hoyF = new Date();
+      const hoyDia = String(hoyF.getDate()).padStart(2, "0");
+      const hoyMes = String(hoyF.getMonth() + 1).padStart(2, "0");
+
+      flagCumpleanios = `${hoyDia}/${hoyMes}` === `${diaF}/${mesF}` ? 1 : 0;
+
+      fechaNacimiento = fechaNacimientoStr;
     }
     return [nombreFamoso, fechaNacimiento, edadFamoso, flagCumpleanios];
   }
