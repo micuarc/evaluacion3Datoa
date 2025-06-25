@@ -1,9 +1,19 @@
 const db = require("./connectDb.js");
 const { importarArchivo } = require("./utils/importarArchivo.js");
-const { obtenerDireccionConAPI } = require("./utils/geocodificacion.js");
+//const { obtenerDireccionConAPI } = require("./utils/geocodificacion.js");
+
+// para probar la funcionalidad sin consultar la api
+const obtenerDireccionConAPI = () => {
+  return {
+    pais: "nombrePais",
+    ciudad_estado_provincia: "nombreArea",
+    nombre_calle: "nombreCalle",
+    numero_calle: "numeroCalle",
+  };
+};
 
 async function scriptTablaOriginal() {
-  let lugares = await importarArchivo("./DATOS3.TXT");
+  let lugares = await importarArchivo("datosLugares");
   lugares.splice(0, 1);
   //crear tabla
   const crearTabla = `CREATE TABLE IF NOT EXISTS tabla_original (
@@ -71,18 +81,10 @@ async function crearTablas() {
   await db.query(sqlDirecciones);
 }
 
-async function ejecutarScript() {
+async function ejecutarLugares() {
   try {
-    await scriptTablaOriginal();
-    const [arrLugares] = await db.query("SELECT * FROM tabla_original");
-
-    // dividir en arrays para que funcionen las posiciones
-    const arrayLugares = arrLugares.map((fila) => {
-      const contenido = fila["column1"];
-      return contenido.split(";");
-    });
-
-    const lugaresUnicos = eliminarLugaresDuplicados(arrayLugares);
+    const arrLugares = await scriptTablaOriginal();
+    const lugaresUnicos = eliminarLugaresDuplicados(arrLugares);
 
     await crearTablas();
 
@@ -96,6 +98,8 @@ async function ejecutarScript() {
       const nombre = fila[0];
       const direccionComp = fila[1];
       const georeferencia = fila[2];
+
+      // separar direccion en variables para la función de georeferncia
       const partesDireccion = direccionComp.split(", ");
       const paisDelTxt =
         partesDireccion.length > 0
@@ -105,29 +109,30 @@ async function ejecutarScript() {
         partesDireccion.length > 0
           ? partesDireccion[partesDireccion.length - 2]
           : null;
-
+      //separar la latitud y lognitud
       const [latitud, longitud] = georeferencia.split(",").map((elem) => {
         return parseFloat(elem.trim());
       });
-
+      //insertar en tabla lugares normalizados
       const [resultadoLugar] = await db.query(
         `INSERT INTO lugares_normalizados (nombre_lugar) VALUES (?)`,
         [nombre]
       );
       const id_lugar = resultadoLugar.insertId;
+      //insertar en tabla georeferncias normalizados
 
       await db.query(
         `INSERT INTO georeferencias_normalizadas (id_lugar, latitud, longitud) VALUES (?, ?, ?)`,
         [id_lugar, latitud, longitud]
       );
-
+      //obtenre la direccion desde la api de geocodificacion de google
       const direccion = await obtenerDireccionConAPI(
         latitud,
         longitud,
         paisDelTxt,
         areaDelTxt
       );
-
+      //insertar la direccion formateada en la tabla direcciones_normalizadas
       await db.query(
         `INSERT INTO direcciones_normalizadas (id_lugar, nombre_calle, numero_calle, ciudad_estado_provincia, pais)
          VALUES (?, ?, ?, ?, ?)`,
@@ -139,7 +144,7 @@ async function ejecutarScript() {
           direccion.pais,
         ]
       );
-
+      //agregar resultados a un array para pasarlos al frontend
       resultadosLugares.push({
         nombre,
         latitud,
@@ -149,14 +154,20 @@ async function ejecutarScript() {
     }
     return resultadosLugares;
   } catch (error) {
-    console.error("Error en ejecutarScript:", error);
+    console.error("Error en ejecutarLugares:", error);
     throw error;
   }
 }
-ejecutarScript();
 
 async function getLugares() {
-  return await ejecutarScript();
+  const [filas] = await db.query(`
+    SELECT lugares_normalizados.nombre_lugar, georeferencias_normalizadas.latitud, georeferencias_normalizadas.longitud, 
+           direcciones_normalizadas.nombre_calle, direcciones_normalizadas.numero_calle, direcciones_normalizadas.ciudad_estado_provincia, direcciones_normalizadas.pais
+    FROM lugares_normalizados
+    JOIN georeferencias_normalizadas ON lugares_normalizados.id_lugar = georeferencias_normalizadas.id_lugar
+    JOIN direcciones_normalizadas ON lugares_normalizados.id_lugar = direcciones_normalizadas.id_lugar
+  `);
+  console.log(filas);
+  return filas;
 }
-
-module.exports = { getLugares };
+module.exports = { getLugares, ejecutarLugares };

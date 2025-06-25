@@ -3,7 +3,7 @@ const { importarArchivo } = require("./utils/importarArchivo.js");
 const regexComienzo = /^\d+\.\s*/;
 
 async function scriptTablaOriginal() {
-  let famosos = await importarArchivo("./DATOS2.TXT");
+  let famosos = await importarArchivo("datosFamosos");
   //crear tabla
   const crearTabla = `CREATE TABLE IF NOT EXISTS famosos (
         column1 VARCHAR(255) not null)`;
@@ -36,7 +36,7 @@ function normalizarFamosos(famoso) {
   let string;
   let antesCristo = false;
   let edadFamoso;
-  let flagCumpleaños = 0;
+  let flagCumpleanios = 0;
   let fechaEnUTC;
   if (famoso.includes("a.C.")) antesCristo = true;
   if (antesCristo && !famoso.includes("alrededor")) {
@@ -93,7 +93,7 @@ function normalizarFamosos(famoso) {
         dia
       )}/${anio} a.C.`;
       if (diaDeHoy.getMonth() + 1 === mes && diaDeHoy.getDate() === dia) {
-        flagCumpleaños = 1;
+        flagCumpleanios = 1;
       }
       fechaEnUTC = Date.UTC(anio * -1, mes - 1, dia, 0, 0, 0, 0);
       edadFamoso = Math.abs(
@@ -123,10 +123,10 @@ function normalizarFamosos(famoso) {
           year: "numeric",
         })
         .replaceAll("-", "/");
-      flagCumpleaños =
+      flagCumpleanios =
         hoy.substring(0, 6) === fechaNacimiento.substring(0, 6) ? 1 : 0;
     }
-    return [nombreFamoso, fechaNacimiento, edadFamoso, flagCumpleaños];
+    return [nombreFamoso, fechaNacimiento, edadFamoso, flagCumpleanios];
   }
 }
 
@@ -168,7 +168,7 @@ function eliminarFamososDuplicados(famosos) {
   return famososUnicos;
 }
 
-async function ejecutarScript() {
+async function ejecutarFamosos() {
   try {
     await scriptTablaOriginal();
     const [rows] = await db.query("SELECT * FROM famosos");
@@ -182,19 +182,19 @@ async function ejecutarScript() {
     await guardarFamosos(famososUnicos);
 
     const [filasNuevas] =
-      await db.query(`SELECT famoso, fechaNacimiento, edad, flagCumpleaños 
+      await db.query(`SELECT famoso, fechaNacimiento, edad, flagCumpleanios 
       FROM famosos_normalizados`);
 
     const resultado = filasNuevas.map((fila) => [
       fila.famoso,
       fila.fechaNacimiento,
       fila.edad,
-      fila.flagCumpleaños,
+      fila.flagCumpleanios,
     ]);
 
     return resultado;
   } catch (error) {
-    console.error("Error en ejecutarScript:", error);
+    console.error("Error en ejecutarFamosos:", error);
     throw error;
   }
 }
@@ -205,7 +205,7 @@ async function crearNuevaTabla() {
     famoso VARCHAR(255) NOT NULL UNIQUE,
     fechaNacimiento VARCHAR(255) NOT NULL,
     edad INTEGER(4),
-    flagCumpleaños TINYINT(1)
+    flagCumpleanios TINYINT(1)
 )
 `;
 
@@ -215,22 +215,22 @@ async function crearNuevaTabla() {
 async function guardarFamosos(famosos) {
   if (famosos.length === 0) return;
   for (const famoso of famosos) {
-    const [nombre, fechaNacimiento, edad, flagCumpleaños] = famoso;
+    const [nombre, fechaNacimiento, edad, flagCumpleanios] = famoso;
     await db.query(
       `INSERT IGNORE INTO famosos_normalizados 
-      (famoso, fechaNacimiento, edad, flagCumpleaños) 
+      (famoso, fechaNacimiento, edad, flagCumpleanios) 
       VALUES (?, ?, ?, ?)`,
-      [nombre, fechaNacimiento, edad, flagCumpleaños]
+      [nombre, fechaNacimiento, edad, flagCumpleanios]
     );
   }
 }
 
 async function getFamosos() {
-  return await ejecutarScript();
+  const [filas] = await db.query(
+    "SELECT famoso, fechaNacimiento, edad, flagCumpleanios FROM famosos_normalizados"
+  );
+  console.log(filas);
+  return filas;
 }
 
-ejecutarScript()
-  .then(() => console.log("Ejecución completa"))
-  .catch((err) => console.error("Error en ejecutarScript:", err));
-
-module.exports = { getFamosos };
+module.exports = { getFamosos, ejecutarFamosos };

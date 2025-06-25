@@ -1,6 +1,12 @@
 //selectores del DOM
 const tabla = document.querySelector("#tablaCiudades tbody");
 const input = document.getElementById("filtrar");
+const spinner = document.getElementById("spinner");
+const contenedorTabla = document.getElementById("containerTabla");
+const formSubirArchivo = document.getElementById("examinar");
+const botonSubir = document.getElementById("subir");
+const inputFile = document.getElementById("inputArchivo");
+const botonDescarga = document.getElementById("descargar");
 
 //array vacío para guardar orden original
 let arrayOriginal = [];
@@ -9,9 +15,32 @@ let filtroActual = "";
 //para definir cuál es el orden actual. por default es original
 let ordenActual = "original";
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+formSubirArchivo.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  botonSubir.disabled = true;
+  spinner.classList.remove("d-none");
+  const formData = new FormData();
+  formData.append("datosCiudades", inputArchivo.files[0]);
+  try {
+    const response = await fetch("/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-//VERSION 2: Mantener los index independientes del filtro aplicado a las ciudades (empieza del index original)
+    if (!response.ok) throw new Error("Error al subir archivo");
+    const resultado = await response.json();
+    spinner.classList.add("d-none");
+    alert("Archivo subido correctamente");
+    await cargarBDCiudades();
+    contenedorTabla.classList.remove("d-none");
+  } catch {
+    console.error(error);
+    alert("Error al subir archivo");
+  } finally {
+    spinner.classList.add("d-none");
+    botonSubir.disabled = false;
+  }
+});
 
 async function cargarBDCiudades() {
   try {
@@ -19,20 +48,21 @@ async function cargarBDCiudades() {
     if (!response.ok) throw new Error("Error al cargar ciudades"); //si falla, mostrar error
     const ciudades = await response.json(); //cargar json de la api
     // asignamos un número fijo a cada ciudad (así no cambian con el filtro)
-    arrayOriginal = ciudades.map((nombre, index) => ({
+    arrayOriginal = ciudades.map((ciudad, index) => ({
       numero: index + 1,
-      nombre: nombre,
+      nombre: ciudad.ciudad,
     }));
-
     aplicarFiltro(); // mostrar tabla inicial
   } catch (error) {
     console.error("Error:", error);
+    alert("No se pudieron cargar las ciudades.");
+  } finally {
+    spinner.classList.add("d-none");
   }
 }
 
 //función para mostrar los valores en la tabla
 function mostrarValores(arr) {
-  tabla.innerHTML = ""; // Limpiar tabla
   arr.forEach((ciudad) => {
     const row = document.createElement("tr"); //crear una fila para cada ergistro
     [ciudad.numero, ciudad.nombre].forEach((valor, i) => {
@@ -69,69 +99,13 @@ function aplicarFiltro() {
   mostrarValores(resultado);
 }
 
-// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-// //VERSION 1: Crear # index según filtro aplicado (siempre empieza del 1)
-// //cargar BD
-// async function cargarBDCiudades() {
-//   try {
-//     const response = await fetch("/api/ciudades"); //llamar a la api
-//     if (!response.ok) throw new Error("Error al cargar ciudades"); //si falla, mostrar error
-//     const ciudades = await response.json(); //parsear json de la api
-//     arrayOriginal = [...ciudades]; //crear copia de array original con nombre ciudades
-//     aplicarFiltro(); // mostrar tabla inicial
-//   } catch (error) {
-//     console.error("Error:", error);
-//   }
-// }
-
-// //mostrar valores en la tabla
-// function mostrarValores(arr) {
-//   tabla.innerHTML = ""; // limpiar tabla
-//   arr.forEach((ciudad, index) => {
-//     const row = document.createElement("tr"); //crear una fila para cada ergistro
-
-//     const celdaIndex = document.createElement("td"); //crear una celda para el # ciudad
-//     celdaIndex.textContent = index + 1; //# de ciudad
-//     row.appendChild(celdaIndex); //agregar a la fila
-
-//     const celdaCiudad = document.createElement("td"); //crear celda para nombre ciudad
-//     celdaCiudad.textContent = ciudad;
-//     row.appendChild(celdaCiudad);
-
-//     tabla.appendChild(row); //agregar fila a la tabla
-//   });
-// }
-
-// //aplicar filtros en la tabla
-// function aplicarFiltro() {
-//   let resultado = [...arrayOriginal]; //copiar el contenido de un array / no su referencia
-
-//   // filtro por texto (input de texto)
-//   if (filtroActual) {
-//     //según el filtro aplicado
-//     resultado = resultado.filter(
-//       (ciudad) => ciudad.toLowerCase().includes(filtroActual.toLowerCase()) //mostrar las ciudades que contengan el string ingresado
-//     );
-//   }
-
-//   // aplicar orden
-//   if (ordenActual === "asc") {
-//     //si el orden es ascendente A-Z
-//     resultado.sort((a, b) => a.localeCompare(b));
-//   } else if (ordenActual === "desc") {
-//     //si el orden es descennte Z-A
-//     resultado.sort((a, b) => b.localeCompare(a));
-//   }
-
-//   mostrarValores(resultado);
-// }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 //LISTENERS
 //esperar que el dom esté cargado x completo
 document.addEventListener("DOMContentLoaded", () => {
+  contenedorTabla.classList.add("d-none"); // oculta tabla al inicio
+  contenedorTabla.classList.remove("d-block");
+  arrayOriginal = [];
+  inputArchivo.value = "";
   //listener cuando se escribe algo en el input
   input.addEventListener("keyup", () => {
     filtroActual = input.value; //guardar string de filtro
@@ -148,4 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   //recargar BD de ciudades con los filtros seleccionados
   cargarBDCiudades();
+});
+
+botonDescarga.addEventListener("click", () => {
+  window.location.href = "/download/ciudades";
 });

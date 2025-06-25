@@ -4,7 +4,7 @@ const { importarArchivo } = require("./utils/importarArchivo.js");
 let arrayCiudades = [];
 
 async function scriptTablaOriginal() {
-  let ciudades = await importarArchivo("./CSN.TXT");
+  let ciudades = await importarArchivo("datosCiudades");
   //crear tabla
   const crearTabla = `CREATE TABLE IF NOT EXISTS ciudades (
         column1 VARCHAR(255) not null)`;
@@ -20,7 +20,8 @@ async function scriptTablaOriginal() {
       `;
     await db.query(importarDatos, ciudad);
   }
-  return ciudades.map((fila) => fila.toString());
+  const [filas] = await db.query("SELECT column1 FROM ciudades");
+  return filas.map((fila) => fila.column1);
 }
 
 function normalizarCiudad(ciudad) {
@@ -44,15 +45,16 @@ async function crearNuevaTabla() {
 }
 
 async function guardarCiudades(ciudades) {
-  if (ciudades.length === 0) return;
-  for (const ciudad of ciudades) {
-    await db.query(
-      "INSERT IGNORE INTO ciudades_normalizadas (ciudad) VALUES (?)",
-      [ciudad]
-    );
-  }
+  if (!ciudades?.length) return;
+  const insercionSQL = ciudades.map((ciudad) =>
+    db.query("INSERT IGNORE INTO ciudades_normalizadas (ciudad) VALUES (?)", [
+      ciudad,
+    ])
+  );
+  await Promise.all(insercionSQL);
 }
-async function ejecutarScript() {
+
+async function ejecutarCiudades() {
   try {
     const filasCiudades = await scriptTablaOriginal();
     const regex = /^\d+\.\s*/; //regex para tomar chars que van antes de la ciudad. Ej: "12. Hola" -> toma "12 ."
@@ -63,7 +65,7 @@ async function ejecutarScript() {
       //limpiamos con el regex
       const palabraTrimmeada = ciudad.replace(regex, "");
       //usamos la función para normalizar la ciudad
-      return normalizarCiudad(palabraTrimmeada);
+      return normalizarCiudad(palabraTrimmeada).replace(/[.,]/g, "");
     });
 
     const ciudades = limpiarCiudades.filter((item, index) => {
@@ -89,8 +91,9 @@ async function ejecutarScript() {
 }
 
 async function getCiudades() {
-  return await ejecutarScript();
+  const [filas] = await db.query("SELECT ciudad FROM ciudades_normalizadas");
+  console.log(filas);
+  return filas;
 }
-console.log(ejecutarScript());
 
-module.exports = { arrayCiudades, getCiudades };
+module.exports = { arrayCiudades, getCiudades, ejecutarCiudades };

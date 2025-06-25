@@ -6,7 +6,7 @@ const connection = mysql.createPool({
   host: "localhost",
   user: "root", // Tu usuario
   password: db_key,
-  database: "evaluacion3Datos",
+  database: "evaluacion3datos",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
