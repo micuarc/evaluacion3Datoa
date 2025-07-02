@@ -89,9 +89,11 @@ async function ejecutarLugares() {
 
     await crearTablas();
 
-    await db.query("DELETE FROM direcciones_normalizadas");
-    await db.query("DELETE FROM georeferencias_normalizadas");
-    await db.query("DELETE FROM lugares_normalizados");
+    await db.query("SET FOREIGN_KEY_CHECKS = 0");
+    await db.query("TRUNCATE TABLE direcciones_normalizadas");
+    await db.query("TRUNCATE TABLE georeferencias_normalizadas");
+    await db.query("TRUNCATE TABLE lugares_normalizados");
+    await db.query("SET FOREIGN_KEY_CHECKS = 1");
 
     const resultadosLugares = [];
 

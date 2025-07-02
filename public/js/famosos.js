@@ -260,10 +260,10 @@ formSubirArchivo.addEventListener("submit", async (e) => {
 // una vez que el dom se carga por completo
 document.addEventListener("DOMContentLoaded", () => {
   //restablecer estados iniciales
+  inputArchivo.value = "";
   contenedorTabla.classList.add("d-none");
   arrayOriginal = [];
   inputvalue = "";
-  inputArchivo.value = "";
   contenedorTabla.classList.add("d-none"); // oculta tabla al inicio
   contenedorTabla.classList.remove("d-block");
 });

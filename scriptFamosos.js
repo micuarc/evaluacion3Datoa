@@ -85,12 +85,17 @@ function normalizarFamosos(famoso) {
     const hoyEnUTC = Date.UTC(
       diaDeHoy.getFullYear(),
       diaDeHoy.getMonth(),
-      diaDeHoy.getDate()
+      diaDeHoy.getDate(),
+      0,
+      0,
+      0,
+      0
     );
 
     if (antesCristo) {
-      fechaNacimiento = `${String(mes).padStart(2, "0")}/${String(
-        dia
+      fechaNacimiento = `${String(dia)}/${String(mes).padStart(
+        2,
+        "0"
       )}/${anio} a.C.`;
       if (diaDeHoy.getMonth() + 1 === mes && diaDeHoy.getDate() === dia) {
         flagCumpleanios = 1;

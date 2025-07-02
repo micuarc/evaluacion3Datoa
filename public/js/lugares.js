@@ -160,7 +160,8 @@ formSubirArchivo.addEventListener("submit", async (e) => {
 document.addEventListener("DOMContentLoaded", () => {
   //restablecer estados iniciales
   arrayOriginal = [];
-  inputFile.value = "";
+  input.value = "";
+  inputArchivo.value = "";
   tabla.replaceChildren();
   contenedorTabla.classList.add("d-none"); // oculta tabla al inicio
   contenedorTabla.classList.remove("d-block");
